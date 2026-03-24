@@ -1,0 +1,14 @@
+{
+  "name": "ora-facepass-dashboard",
+  "version": "1.0.0",
+  "description": "Ora FacePass lead management automation and alerts",
+  "main": "index.js",
+  "scripts": {
+    "lead-aging": "node scripts/lead-aging-alert.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "dayjs": "^1.11.11"
+  }
+}
