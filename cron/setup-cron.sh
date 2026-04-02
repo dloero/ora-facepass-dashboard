@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
 # setup-cron.sh
-# Installs (or updates) the Ora FacePass Lead Aging Alert cron job.
+# Installs (or updates) ALL Ora FacePass automation cron jobs.
 #
-# Schedule: 9:00 PM Mountain Time daily
-#   • MDT (UTC−6, Mar–Nov):  cron runs at 03:00 UTC  → "0 3 * * *"
-#   • MST (UTC−7, Nov–Mar):  cron runs at 04:00 UTC  → "0 4 * * *"
+# Jobs installed:
 #
-# To handle the DST shift automatically we run at BOTH 03:00 and 04:00 UTC
-# but guard with a TZ-aware check inside the script itself so it only fires
-# once per day at the correct local time.
+#   1. Lead Aging Alert          — 9:00 PM MT daily
+#      MDT (UTC−6): 03:00 UTC   MST (UTC−7): 04:00 UTC
+#
+#   2. Demo Follow-Up Drafter    — 12:00 PM MT daily
+#      MDT (UTC−6): 18:00 UTC   MST (UTC−7): 19:00 UTC
+#
+# Both jobs install dual UTC cron entries (MDT + MST) to handle DST
+# automatically. The scripts themselves also guard against running twice.
 #
 # Usage:
 #   chmod +x cron/setup-cron.sh
@@ -20,42 +23,53 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-SCRIPT_PATH="$PROJECT_DIR/scripts/lead-aging-alert.js"
-LOG_PATH="$PROJECT_DIR/logs/lead-aging-alert.log"
 NODE_BIN="$(command -v node || echo '/usr/bin/node')"
 
 # Ensure log directory exists
 mkdir -p "$PROJECT_DIR/logs"
 
-# Cron job line (tagged so we can identify / replace it)
-CRON_TAG="# ora-facepass-lead-aging-alert"
-CRON_JOB_MDT="0 3 * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$SCRIPT_PATH' >> '$LOG_PATH' 2>&1 $CRON_TAG-mdt"
-CRON_JOB_MST="0 4 * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$SCRIPT_PATH' >> '$LOG_PATH' 2>&1 $CRON_TAG-mst"
+# ── 1. Lead Aging Alert (9 PM MT) ─────────────────────────────────────────────
+AGING_SCRIPT="$PROJECT_DIR/scripts/lead-aging-alert.js"
+AGING_LOG="$PROJECT_DIR/logs/lead-aging-alert.log"
+AGING_TAG="# ora-facepass-lead-aging-alert"
+AGING_JOB_MDT="0 3  * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$AGING_SCRIPT' >> '$AGING_LOG' 2>&1 $AGING_TAG-mdt"
+AGING_JOB_MST="0 4  * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$AGING_SCRIPT' >> '$AGING_LOG' 2>&1 $AGING_TAG-mst"
 
-echo "Installing Ora FacePass Lead Aging Alert cron jobs..."
+# ── 2. Demo Follow-Up Drafter (12 PM MT) ──────────────────────────────────────
+DEMO_SCRIPT="$PROJECT_DIR/scripts/demo-followup-drafter.js"
+DEMO_LOG="$PROJECT_DIR/logs/demo-followup-drafter.log"
+DEMO_TAG="# ora-facepass-demo-followup"
+DEMO_JOB_MDT="0 18 * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$DEMO_SCRIPT' >> '$DEMO_LOG' 2>&1 $DEMO_TAG-mdt"
+DEMO_JOB_MST="0 19 * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$DEMO_SCRIPT' >> '$DEMO_LOG' 2>&1 $DEMO_TAG-mst"
+
+echo "Installing Ora FacePass cron jobs..."
 echo "  Project: $PROJECT_DIR"
-echo "  Script:  $SCRIPT_PATH"
-echo "  Log:     $LOG_PATH"
 echo "  Node:    $NODE_BIN"
 echo ""
 
 # Load existing crontab (ignore error if empty)
 CURRENT_CRON="$(crontab -l 2>/dev/null || true)"
 
-# Remove any previously installed versions of this job
-CLEAN_CRON="$(echo "$CURRENT_CRON" | grep -v "$CRON_TAG" || true)"
+# Remove any previously installed versions of both jobs
+CLEAN_CRON="$(echo "$CURRENT_CRON" | grep -v "$AGING_TAG" | grep -v "$DEMO_TAG" || true)"
 
 # Append the new jobs
 NEW_CRON="${CLEAN_CRON}
-${CRON_JOB_MDT}
-${CRON_JOB_MST}"
+${AGING_JOB_MDT}
+${AGING_JOB_MST}
+${DEMO_JOB_MDT}
+${DEMO_JOB_MST}"
 
 # Install
 echo "$NEW_CRON" | crontab -
 
 echo "✓ Cron jobs installed:"
 echo ""
-crontab -l | grep "$CRON_TAG"
+crontab -l | grep -E "$AGING_TAG|$DEMO_TAG"
 echo ""
-echo "The alert will fire every day at 9:00 PM MT (3:00 AM UTC in summer / 4:00 AM UTC in winter)."
-echo "Logs → $LOG_PATH"
+echo "Lead Aging Alert:       9:00 AM MT  (03:00/04:00 UTC)"
+echo "Demo Follow-Up Drafter: 12:00 PM MT (18:00/19:00 UTC)"
+echo ""
+echo "Logs:"
+echo "  $AGING_LOG"
+echo "  $DEMO_LOG"

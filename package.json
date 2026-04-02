@@ -4,7 +4,8 @@
   "description": "Ora FacePass lead management automation and alerts",
   "main": "index.js",
   "scripts": {
-    "lead-aging": "node scripts/lead-aging-alert.js"
+    "lead-aging": "node scripts/lead-aging-alert.js",
+    "demo-followups": "node scripts/demo-followup-drafter.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
