@@ -16,6 +16,8 @@ const axios = require("axios");
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 const timezone = require("dayjs/plugin/timezone");
+const fs = require("fs");
+const path = require("path");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -32,9 +34,40 @@ const CALENDLY_LINK       = process.env.CALENDLY_LINK || "https://calendly.com/o
 const MT_TZ    = "America/Denver";
 const GHL_BASE = "https://rest.gohighlevel.com/v1";
 
+// Run-once guard: prevents duplicate runs within this many hours.
+// Both MDT (18:00 UTC) and MST (19:00 UTC) cron entries fire every day,
+// so this lockfile ensures only the first one actually runs.
+const LOCK_WINDOW_HOURS = 4;
+const LOCK_FILE = path.join(__dirname, "../logs/demo-followup-drafter.lock");
+
 // Appointment statuses GHL uses for a completed / attended demo.
 // "showed" = prospect attended; "completed" = marked done by rep.
 const COMPLETED_STATUSES = new Set(["showed", "completed"]);
+
+// ─── Run-once guard ───────────────────────────────────────────────────────────
+
+/**
+ * Returns true if the script has already run within LOCK_WINDOW_HOURS.
+ * Writes/updates the lock file if it's safe to proceed.
+ */
+function acquireLock() {
+  try {
+    fs.mkdirSync(path.dirname(LOCK_FILE), { recursive: true });
+    if (fs.existsSync(LOCK_FILE)) {
+      const lastRun = parseInt(fs.readFileSync(LOCK_FILE, "utf8").trim(), 10);
+      const hoursSince = (Date.now() - lastRun) / (1000 * 60 * 60);
+      if (hoursSince < LOCK_WINDOW_HOURS) {
+        return false; // already ran recently
+      }
+    }
+    fs.writeFileSync(LOCK_FILE, String(Date.now()), "utf8");
+    return true;
+  } catch (err) {
+    // If lock check fails for any reason, allow the run (fail open)
+    console.warn("  Lock file check failed — proceeding anyway:", err.message);
+    return true;
+  }
+}
 
 // ─── GHL helpers ─────────────────────────────────────────────────────────────
 
@@ -248,6 +281,11 @@ async function main() {
   const now     = dayjs().tz(MT_TZ);
   const runDate = now.format("dddd, MMM D");
   console.log(`[${new Date().toISOString()}] Ora FacePass Demo Follow-Up Drafter starting…`);
+
+  if (!acquireLock()) {
+    console.log("  Already ran within the last", LOCK_WINDOW_HOURS, "hours — skipping duplicate run.");
+    process.exit(0);
+  }
 
   // 24-hour window ending now, in UTC ISO format (what GHL expects)
   const windowEnd   = now.utc();

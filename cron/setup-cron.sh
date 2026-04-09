@@ -6,13 +6,12 @@
 # Jobs installed:
 #
 #   1. Lead Aging Alert          — 9:00 PM MT daily
-#      MDT (UTC−6): 03:00 UTC   MST (UTC−7): 04:00 UTC
-#
 #   2. Demo Follow-Up Drafter    — 12:00 PM MT daily
-#      MDT (UTC−6): 18:00 UTC   MST (UTC−7): 19:00 UTC
 #
-# Both jobs install dual UTC cron entries (MDT + MST) to handle DST
-# automatically. The scripts themselves also guard against running twice.
+# Cron entries use TZ=America/Denver so they fire at the correct local time
+# year-round, regardless of DST. No dual UTC entries needed.
+# A lockfile inside demo-followup-drafter.js provides an additional guard
+# against accidental duplicate runs within a 4-hour window.
 #
 # Usage:
 #   chmod +x cron/setup-cron.sh
@@ -32,15 +31,13 @@ mkdir -p "$PROJECT_DIR/logs"
 AGING_SCRIPT="$PROJECT_DIR/scripts/lead-aging-alert.js"
 AGING_LOG="$PROJECT_DIR/logs/lead-aging-alert.log"
 AGING_TAG="# ora-facepass-lead-aging-alert"
-AGING_JOB_MDT="0 3  * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$AGING_SCRIPT' >> '$AGING_LOG' 2>&1 $AGING_TAG-mdt"
-AGING_JOB_MST="0 4  * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$AGING_SCRIPT' >> '$AGING_LOG' 2>&1 $AGING_TAG-mst"
+AGING_JOB="TZ=America/Denver 0 21 * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$AGING_SCRIPT' >> '$AGING_LOG' 2>&1 $AGING_TAG"
 
 # ── 2. Demo Follow-Up Drafter (12 PM MT) ──────────────────────────────────────
 DEMO_SCRIPT="$PROJECT_DIR/scripts/demo-followup-drafter.js"
 DEMO_LOG="$PROJECT_DIR/logs/demo-followup-drafter.log"
 DEMO_TAG="# ora-facepass-demo-followup"
-DEMO_JOB_MDT="0 18 * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$DEMO_SCRIPT' >> '$DEMO_LOG' 2>&1 $DEMO_TAG-mdt"
-DEMO_JOB_MST="0 19 * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$DEMO_SCRIPT' >> '$DEMO_LOG' 2>&1 $DEMO_TAG-mst"
+DEMO_JOB="TZ=America/Denver 0 12 * * * cd '$PROJECT_DIR' && '$NODE_BIN' '$DEMO_SCRIPT' >> '$DEMO_LOG' 2>&1 $DEMO_TAG"
 
 echo "Installing Ora FacePass cron jobs..."
 echo "  Project: $PROJECT_DIR"
@@ -55,10 +52,8 @@ CLEAN_CRON="$(echo "$CURRENT_CRON" | grep -v "$AGING_TAG" | grep -v "$DEMO_TAG" 
 
 # Append the new jobs
 NEW_CRON="${CLEAN_CRON}
-${AGING_JOB_MDT}
-${AGING_JOB_MST}
-${DEMO_JOB_MDT}
-${DEMO_JOB_MST}"
+${AGING_JOB}
+${DEMO_JOB}"
 
 # Install
 echo "$NEW_CRON" | crontab -
@@ -67,8 +62,8 @@ echo "✓ Cron jobs installed:"
 echo ""
 crontab -l | grep -E "$AGING_TAG|$DEMO_TAG"
 echo ""
-echo "Lead Aging Alert:       9:00 PM MT  (03:00/04:00 UTC)"
-echo "Demo Follow-Up Drafter: 12:00 PM MT (18:00/19:00 UTC)"
+echo "Lead Aging Alert:       9:00 PM MT  (TZ=America/Denver)"
+echo "Demo Follow-Up Drafter: 12:00 PM MT (TZ=America/Denver)"
 echo ""
 echo "Logs:"
 echo "  $AGING_LOG"
