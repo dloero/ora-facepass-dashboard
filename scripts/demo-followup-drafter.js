@@ -35,8 +35,8 @@ const MT_TZ    = "America/Denver";
 const GHL_BASE = "https://rest.gohighlevel.com/v1";
 
 // Run-once guard: prevents duplicate runs within this many hours.
-// Both MDT (18:00 UTC) and MST (19:00 UTC) cron entries fire every day,
-// so this lockfile ensures only the first one actually runs.
+// Cron fires via TZ=America/Denver, but this guard provides an extra safety net
+// against accidental re-triggers (e.g. manual test runs close to noon).
 const LOCK_WINDOW_HOURS = 4;
 const LOCK_FILE = path.join(__dirname, "../logs/demo-followup-drafter.lock");
 
@@ -83,30 +83,46 @@ function ghlHeaders() {
 }
 
 /**
- * Fetch appointments for a given UTC date range.
+ * Fetch ALL appointments for a given UTC date range, handling GHL pagination.
  * GHL v1: GET /appointments/
- * Query params: locationId, startTime, endTime (ISO strings), calendarId (optional)
+ * Query params: locationId, startTime, endTime (ISO strings), calendarId (optional),
+ *               limit (max per page), skip (offset for pagination)
  */
 async function fetchAppointments(startISO, endISO) {
-  const params = {
-    locationId: GHL_LOCATION_ID,
-    startTime: startISO,
-    endTime: endISO,
-  };
-  if (GHL_CALENDAR_ID) params.calendarId = GHL_CALENDAR_ID;
+  const PAGE_LIMIT = 100; // GHL v1 max per page
+  const all = [];
+  let skip = 0;
 
-  const response = await axios.get(`${GHL_BASE}/appointments/`, {
-    headers: ghlHeaders(),
-    params,
-  });
+  while (true) {
+    const params = {
+      locationId: GHL_LOCATION_ID,
+      startTime: startISO,
+      endTime: endISO,
+      limit: PAGE_LIMIT,
+      skip,
+    };
+    if (GHL_CALENDAR_ID) params.calendarId = GHL_CALENDAR_ID;
 
-  // GHL returns { appointments: [...] } or { data: [...] } depending on version
-  return (
-    response.data?.appointments ??
-    response.data?.data ??
-    response.data ??
-    []
-  );
+    const response = await axios.get(`${GHL_BASE}/appointments/`, {
+      headers: ghlHeaders(),
+      params,
+    });
+
+    // GHL returns { appointments: [...] } or { data: [...] } depending on version
+    const page = (
+      response.data?.appointments ??
+      response.data?.data ??
+      (Array.isArray(response.data) ? response.data : [])
+    );
+
+    all.push(...page);
+
+    // Stop when we get a partial page (no more results)
+    if (page.length < PAGE_LIMIT) break;
+    skip += PAGE_LIMIT;
+  }
+
+  return all;
 }
 
 /**
