@@ -28,10 +28,16 @@ const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 const SLACK_DERECK_USER_ID = process.env.SLACK_DERECK_USER_ID || null;
 const AGING_DAYS = parseInt(process.env.LEAD_AGING_THRESHOLD_DAYS ?? "3", 10);
 const REASSIGN_DAYS = parseInt(
-  process.env.LEAD_REASSIGNMENT_THRESHOLD_DAYS ?? "7",
+  process.env.LEAD_REASSIGNMENT_THRESHOLD_DAYS ?? "30",
   10
 );
-const APOLLO_LEAD_LABEL = process.env.APOLLO_LEAD_LABEL || "Ora FacePass";
+// Set APOLLO_LEAD_LABEL to a label name to restrict the scan to a specific list.
+// Leave blank (default) to scan all contacts in the account.
+const APOLLO_LEAD_LABEL = process.env.APOLLO_LEAD_LABEL || "";
+// Stop paginating once every contact on a page is older than this many days.
+// Keeps runtime fast on large accounts (98K+ contacts) without missing recent leads.
+const EARLY_STOP_DAYS = parseInt(process.env.LEAD_EARLY_STOP_DAYS ?? "60", 10);
+const MAX_PAGES = parseInt(process.env.LEAD_MAX_PAGES ?? "20", 10);
 
 const APOLLO_BASE = "https://api.apollo.io/v1";
 
@@ -46,13 +52,12 @@ async function fetchContactPage(page = 1) {
     api_key: APOLLO_API_KEY,
     page,
     per_page: 100,
-    // Filter to only the Ora FacePass label/list when configured
-    ...(APOLLO_LEAD_LABEL
-      ? { label_names: [APOLLO_LEAD_LABEL] }
-      : {}),
-    // Sort by last_activity_date ascending so the stalest leads come first
+    // Restrict to a named label/list when configured; otherwise scan all contacts.
+    ...(APOLLO_LEAD_LABEL ? { label_names: [APOLLO_LEAD_LABEL] } : {}),
+    // Sort newest-activity-first so we see recently-stale leads immediately.
+    // We stop paginating once all contacts on a page are older than EARLY_STOP_DAYS.
     sort_by_field: "contact_last_activity_date",
-    sort_ascending: true,
+    sort_ascending: false,
   };
 
   const response = await axios.post(`${APOLLO_BASE}/contacts/search`, payload, {
@@ -63,20 +68,33 @@ async function fetchContactPage(page = 1) {
 }
 
 /**
- * Pull all contacts across paginated results.
+ * Pull contacts, stopping early once the page is entirely beyond EARLY_STOP_DAYS.
+ * Caps at MAX_PAGES to protect against runaway pagination on very large accounts.
  */
 async function fetchAllContacts() {
   const contacts = [];
   let page = 1;
   let totalPages = 1;
+  const now = dayjs().tz(MT_TZ);
 
   do {
     const data = await fetchContactPage(page);
     const pageContacts = data.contacts ?? [];
     contacts.push(...pageContacts);
     totalPages = data.pagination?.total_pages ?? 1;
+
+    // Early-stop: if every contact on this page is older than EARLY_STOP_DAYS,
+    // anything on the next pages will be too — no point fetching further.
+    const allOld = pageContacts.length > 0 && pageContacts.every((c) => {
+      const raw = c.contact_last_activity_date ?? c.last_activity_date ?? c.updated_at;
+      if (!raw) return true;
+      return now.diff(dayjs.tz(raw, MT_TZ), "day") > EARLY_STOP_DAYS;
+    });
+
+    if (allOld) break;
+
     page += 1;
-  } while (page <= totalPages);
+  } while (page <= totalPages && page <= MAX_PAGES);
 
   return contacts;
 }
