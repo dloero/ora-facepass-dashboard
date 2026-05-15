@@ -1,0 +1,38 @@
+name: Ora FacePass Lead Aging Alert
+
+on:
+  schedule:
+    # 9 PM MDT (UTC-6) = 03:00 UTC.
+    # In MST (UTC-7, Nov–Mar) this fires at 8 PM MT — 1-hour drift is acceptable.
+    # GitHub Actions cron does not support named time zones.
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allow Dereck to trigger a manual run any time
+
+jobs:
+  lead-aging-alert:
+    name: Scan stale leads & post to Slack
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lead aging alert
+        run: node scripts/lead-aging-alert.js
+        env:
+          APOLLO_API_KEY: ${{ secrets.APOLLO_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_DERECK_USER_ID: ${{ secrets.SLACK_DERECK_USER_ID }}
+          LEAD_AGING_THRESHOLD_DAYS: '3'
+          LEAD_REASSIGNMENT_THRESHOLD_DAYS: '30'
+          APOLLO_LEAD_LABEL: ${{ vars.APOLLO_LEAD_LABEL }}
+          LEAD_EARLY_STOP_DAYS: '60'
+          LEAD_MAX_PAGES: '20'
