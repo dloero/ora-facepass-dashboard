@@ -3,8 +3,12 @@
  *
  * Runs daily at 12:00 PM MT (via cron).
  * Queries GoHighLevel (GHL) for Ora FacePass demo appointments completed in
- * the last 24 hours. For each completed demo, drafts a follow-up email and
- * posts it to Slack for Dereck to review before sending.
+ * the last 24 hours. For each completed demo:
+ *   1. Creates a Gmail draft so Dereck can review and send with one click.
+ *   2. Posts the draft text to Slack for visibility and review.
+ *
+ * Gmail drafts require GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET / GMAIL_REFRESH_TOKEN.
+ * If those are not set, the script falls back to Slack-only mode.
  *
  * If no demos were completed in the last 24 hours, posts a short confirmation.
  *
@@ -24,12 +28,20 @@ dayjs.extend(timezone);
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const GHL_API_KEY         = process.env.GHL_API_KEY;
-const GHL_LOCATION_ID     = process.env.GHL_LOCATION_ID;
-const GHL_CALENDAR_ID     = process.env.GHL_CALENDAR_ID || null; // optional: filter to a specific calendar
-const SLACK_WEBHOOK_URL   = process.env.SLACK_WEBHOOK_URL;
+const GHL_API_KEY          = process.env.GHL_API_KEY;
+const GHL_LOCATION_ID      = process.env.GHL_LOCATION_ID;
+const GHL_CALENDAR_ID      = process.env.GHL_CALENDAR_ID || null;
+const SLACK_WEBHOOK_URL    = process.env.SLACK_WEBHOOK_URL;
 const SLACK_DERECK_USER_ID = process.env.SLACK_DERECK_USER_ID || null;
-const CALENDLY_LINK       = process.env.CALENDLY_LINK || "https://calendly.com/orafacepass";
+const CALENDLY_LINK        = process.env.CALENDLY_LINK || "https://calendly.com/orafacepass";
+
+// Gmail OAuth2 — optional; enables actual Gmail draft creation
+const GMAIL_CLIENT_ID     = process.env.GMAIL_CLIENT_ID     || null;
+const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || null;
+const GMAIL_REFRESH_TOKEN = process.env.GMAIL_REFRESH_TOKEN || null;
+const GMAIL_FROM_EMAIL    = process.env.GMAIL_FROM_EMAIL    || null; // e.g. dereck@orafacepass.com
+
+const GMAIL_ENABLED = !!(GMAIL_CLIENT_ID && GMAIL_CLIENT_SECRET && GMAIL_REFRESH_TOKEN);
 
 const MT_TZ    = "America/Denver";
 const GHL_BASE = "https://rest.gohighlevel.com/v1";
@@ -194,9 +206,14 @@ function escapeSlack(str) {
  * Build a single Slack section block for one email draft.
  */
 function buildDraftBlock(draft, index, total) {
-  const header = `📧 *Draft ${index + 1} of ${total}* — To: ${escapeSlack(draft.to)}`;
+  const gmailNote = draft._gmail?.ok
+    ? ` · <https://mail.google.com/mail/u/0/#drafts|Open in Gmail Drafts>`
+    : draft._gmail
+    ? ` · ⚠️ Gmail draft failed`
+    : "";
+
+  const header = `📧 *Draft ${index + 1} of ${total}* — To: ${escapeSlack(draft.to)}${gmailNote}`;
   const subjectLine = `*Subject:* ${escapeSlack(draft.subject)}`;
-  // Indent the body for readability in Slack
   const indentedBody = draft.body
     .split("\n")
     .map((l) => `> ${escapeSlack(l)}`)
@@ -276,6 +293,72 @@ function buildSlackPayload(drafts, runDate) {
 
 async function postToSlack(payload) {
   await axios.post(SLACK_WEBHOOK_URL, payload);
+}
+
+// ─── Gmail helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Exchange the stored refresh token for a short-lived access token.
+ */
+async function getGmailAccessToken() {
+  const response = await axios.post("https://oauth2.googleapis.com/token", {
+    client_id: GMAIL_CLIENT_ID,
+    client_secret: GMAIL_CLIENT_SECRET,
+    refresh_token: GMAIL_REFRESH_TOKEN,
+    grant_type: "refresh_token",
+  });
+  return response.data.access_token;
+}
+
+/**
+ * Create a Gmail draft for the given email draft object.
+ * Returns the Gmail draft ID on success.
+ */
+async function createGmailDraft(draft, accessToken) {
+  const fromHeader = GMAIL_FROM_EMAIL ? `From: ${GMAIL_FROM_EMAIL}\r\n` : "";
+  const rawMessage = [
+    `${fromHeader}To: ${draft.to}`,
+    `Subject: ${draft.subject}`,
+    `Content-Type: text/plain; charset=utf-8`,
+    ``,
+    draft.body,
+  ].join("\r\n");
+
+  const encodedMessage = Buffer.from(rawMessage).toString("base64url");
+
+  const response = await axios.post(
+    "https://gmail.googleapis.com/gmail/v1/users/me/drafts",
+    { message: { raw: encodedMessage } },
+    { headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" } }
+  );
+  return response.data.id;
+}
+
+/**
+ * Create Gmail drafts for all email drafts.
+ * Returns a map of draft index → Gmail draft ID (or error string).
+ */
+async function createAllGmailDrafts(drafts) {
+  let accessToken;
+  try {
+    accessToken = await getGmailAccessToken();
+  } catch (err) {
+    console.error("  Gmail token refresh failed:", err.message);
+    return {};
+  }
+
+  const results = {};
+  for (let i = 0; i < drafts.length; i++) {
+    try {
+      const gmailDraftId = await createGmailDraft(drafts[i], accessToken);
+      results[i] = { id: gmailDraftId, ok: true };
+      console.log(`  Gmail draft created for ${drafts[i].fullName} (draft ID: ${gmailDraftId})`);
+    } catch (err) {
+      results[i] = { ok: false, error: err.message };
+      console.error(`  Gmail draft FAILED for ${drafts[i].fullName}:`, err.message);
+    }
+  }
+  return results;
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -358,7 +441,21 @@ async function main() {
     );
   }
 
-  // ── 4. Post to Slack ───────────────────────────────────────────────────────
+  // ── 4. Create Gmail drafts (if Gmail OAuth is configured) ─────────────────
+  let gmailResults = {};
+  if (GMAIL_ENABLED && drafts.length > 0) {
+    console.log("  Creating Gmail drafts…");
+    gmailResults = await createAllGmailDrafts(drafts);
+  } else if (!GMAIL_ENABLED && drafts.length > 0) {
+    console.log("  Gmail not configured — skipping Gmail draft creation (Slack-only mode).");
+  }
+
+  // Annotate each draft with its Gmail result for the Slack message
+  drafts.forEach((draft, i) => {
+    draft._gmail = gmailResults[i] || null;
+  });
+
+  // ── 5. Post to Slack ───────────────────────────────────────────────────────
   const payload = buildSlackPayload(drafts, runDate);
 
   try {
@@ -366,7 +463,12 @@ async function main() {
     if (drafts.length === 0) {
       console.log("  ✓ No demos found — confirmation posted to Slack.");
     } else {
-      console.log(`  ✓ ${drafts.length} draft(s) posted to Slack for review.`);
+      const gmailOk = Object.values(gmailResults).filter((r) => r.ok).length;
+      console.log(
+        `  ✓ ${drafts.length} draft(s) posted to Slack` +
+          (GMAIL_ENABLED ? ` · ${gmailOk} Gmail draft(s) created` : "") +
+          "."
+      );
     }
   } catch (err) {
     console.error("Failed to post to Slack:", err.message);
