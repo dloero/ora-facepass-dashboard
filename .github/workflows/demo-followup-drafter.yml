@@ -1,0 +1,41 @@
+name: Demo Follow-Up Drafter
+
+on:
+  schedule:
+    # 12:00 PM MT = 18:00 UTC (MST, Nov–Mar) / 19:00 UTC (MDT, Mar–Nov)
+    # Run at both to cover DST transitions — the lock file in the script
+    # prevents duplicate execution within a 4-hour window.
+    - cron: "0 18 * * *"
+    - cron: "0 19 * * *"
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+jobs:
+  run-drafter:
+    name: Check GHL & draft follow-ups
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Write .env from secrets
+        run: |
+          cat <<EOF > .env
+          GHL_API_KEY=${{ secrets.GHL_API_KEY }}
+          GHL_LOCATION_ID=${{ secrets.GHL_LOCATION_ID }}
+          GHL_CALENDAR_ID=${{ secrets.GHL_CALENDAR_ID }}
+          SLACK_WEBHOOK_URL=${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_DERECK_USER_ID=${{ secrets.SLACK_DERECK_USER_ID }}
+          CALENDLY_LINK=${{ secrets.CALENDLY_LINK }}
+          EOF
+
+      - name: Run demo follow-up drafter
+        run: node scripts/demo-followup-drafter.js
