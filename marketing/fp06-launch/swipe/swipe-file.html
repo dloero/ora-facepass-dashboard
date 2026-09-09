@@ -1,0 +1,778 @@
+<title>FP06 Launch Swipe File</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root { --bg:#E8E4DD; --paper:#F7F5F1; --ink:#14161A; --muted:#4D515A; --line:rgba(20,22,26,.14); --accent:#C9821A; --accent-ink:#8F5A0C; --accent-soft:rgba(201,130,26,.14); --warn-bg:rgba(201,130,26,.12); --ok:#2E7D4F;
+  --display:"Archivo","Arial Black",sans-serif; --body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0E1114; --paper:#171B21; --ink:#F3F0EA; --muted:#A8ADB5; --line:rgba(243,240,234,.16); --accent:#F0B248; --accent-ink:#F0B248; --accent-soft:rgba(240,178,72,.14); --warn-bg:rgba(240,178,72,.12); --ok:#6FCF97; color-scheme:dark; } }
+:root[data-theme="dark"] { --bg:#0E1114; --paper:#171B21; --ink:#F3F0EA; --muted:#A8ADB5; --line:rgba(243,240,234,.16); --accent:#F0B248; --accent-ink:#F0B248; --accent-soft:rgba(240,178,72,.14); --warn-bg:rgba(240,178,72,.12); --ok:#6FCF97; color-scheme:dark; }
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+a { color:inherit; }
+h1,h2,h3,h4 { font-family:var(--display); font-variation-settings:"wdth" 116; font-weight:740; letter-spacing:-.02em; line-height:1.05; margin:0; text-wrap:balance; }
+h1 { font-size:clamp(36px,5vw,58px); } h2 { font-size:30px; margin-top:8px; } h3 { font-size:20px; font-variation-settings:"wdth" 110; margin-top:28px; } h4 { font-size:16px; font-variation-settings:"wdth" 108; margin-top:18px; }
+p { margin:0; text-wrap:pretty; }
+p + p { margin-top:10px; }
+.eyebrow { display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-weight:600; font-size:12.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.eyebrow i { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+.layout { display:grid; grid-template-columns:250px 1fr; gap:48px; width:min(1180px, calc(100% - 40px)); margin:0 auto; }
+aside { position:sticky; top:0; align-self:start; height:100vh; overflow:auto; padding:40px 0; }
+aside .mark { display:inline-flex; align-items:center; gap:10px; font-family:var(--display); font-variation-settings:"wdth" 112; font-weight:700; font-size:18px; margin-bottom:24px; }
+aside .mark svg { width:22px; height:22px; color:var(--accent); }
+aside nav { display:flex; flex-direction:column; gap:2px; }
+aside nav a { text-decoration:none; font-size:14px; color:var(--muted); padding:7px 10px; border-radius:8px; display:flex; gap:10px; }
+aside nav a b { font-family:var(--mono); font-size:11.5px; color:var(--accent-ink); font-weight:600; min-width:22px; padding-top:2px; }
+aside nav a:hover { background:var(--paper); color:var(--ink); }
+main { padding:40px 0 100px; max-width:860px; }
+@media (max-width:900px) { .layout { grid-template-columns:1fr; gap:0; } aside { position:static; height:auto; padding:28px 0 0; } aside nav { flex-direction:row; flex-wrap:wrap; } }
+header.doc { padding-bottom:28px; border-bottom:1px solid var(--line); margin-bottom:36px; }
+header.doc p.lede { color:var(--muted); font-size:18px; margin-top:14px; max-width:34em; }
+.meta { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:16px; font-family:var(--mono); font-size:12.5px; color:var(--muted); }
+section.s { padding:36px 0; border-bottom:1px solid var(--line); }
+section.s > p, section.s li { max-width:42em; }
+ul, ol { margin:10px 0 0; padding-left:22px; }
+li { margin:5px 0; }
+table { width:100%; border-collapse:collapse; margin-top:14px; font-size:15px; }
+th, td { text-align:left; vertical-align:top; padding:10px 12px 10px 0; border-bottom:1px solid var(--line); }
+th { font-family:var(--mono); font-weight:600; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.tbl { overflow-x:auto; }
+.block { border:1.5px solid var(--line); border-radius:14px; background:var(--paper); padding:14px 16px; margin-top:14px; }
+.block .lab { font-family:var(--mono); font-weight:600; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.block pre { margin:0; white-space:pre-wrap; font:inherit; font-size:15px; line-height:1.55; }
+.block button { font:inherit; font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; padding:4px 10px; border-radius:999px; border:1.5px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; flex:none; }
+.block button:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.memo { border-left:3px solid var(--accent); padding:4px 0 4px 18px; margin-top:16px; }
+.memo p { max-width:40em; }
+.flag { background:var(--warn-bg); border:1.5px solid color-mix(in srgb, var(--accent) 50%, transparent); border-radius:14px; padding:14px 16px; margin-top:14px; }
+.flag b { font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:6px; }
+.sender { font-family:var(--mono); font-size:12.5px; color:var(--muted); background:var(--paper); border:1px dashed var(--line); border-radius:10px; padding:8px 12px; margin-top:16px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media (max-width:700px) { .grid2 { grid-template-columns:1fr; } }
+.kpi { border:1.5px solid var(--line); border-radius:14px; padding:14px 16px; background:var(--paper); }
+.kpi b { display:block; font-family:var(--display); font-variation-settings:"wdth" 112; font-weight:740; font-size:26px; letter-spacing:-.02em; }
+.kpi span { font-size:13.5px; color:var(--muted); }
+.ok { color:var(--ok); font-family:var(--mono); font-weight:600; }
+.no { color:var(--accent-ink); font-family:var(--mono); font-weight:600; }
+code { font-family:var(--mono); font-size:13px; background:var(--paper); border:1px solid var(--line); padding:1px 6px; border-radius:6px; }
+.hooks { columns:2; column-gap:28px; margin-top:10px; }
+.hooks li { break-inside:avoid; margin:0 0 8px; padding-left:0; list-style:none; display:flex; gap:10px; }
+.hooks li b { font-family:var(--mono); font-size:11.5px; color:var(--accent-ink); min-width:22px; padding-top:3px; }
+@media (max-width:700px) { .hooks { columns:1; } }
+.concept-copy { margin-top:22px; padding-top:18px; border-top:1px dashed var(--line); }
+.concept-copy .id { font-family:var(--mono); font-weight:600; font-size:12px; letter-spacing:.12em; color:var(--accent-ink); }
+</style>
+<div class="layout">
+<aside>
+  <span class="mark"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M4 12V7a3 3 0 0 1 3-3h5M20 4h5a3 3 0 0 1 3 3v5M28 20v5a3 3 0 0 1-3 3h-5M12 28H7a3 3 0 0 1-3-3v-5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="16" cy="16" r="4.6" fill="currentColor"/></svg>Ora FacePass</span>
+  <nav aria-label="Sections">
+    <a href="#s0"><b>00</b>Read this first</a>
+    <a href="#s1"><b>01</b>Offer and funnel</a>
+    <a href="#s2"><b>02</b>Meta campaign build</a>
+    <a href="#s3"><b>03</b>Ad copy bank</a>
+    <a href="#s4"><b>04</b>Hook library</a>
+    <a href="#s5"><b>05</b>Carousels</a>
+    <a href="#s6"><b>06</b>Video scripts</a>
+    <a href="#s7"><b>07</b>Retargeting and launch day</a>
+    <a href="#s8"><b>08</b>GHL follow-up sequences</a>
+    <a href="#s9"><b>09</b>The retail flip</a>
+    <a href="#s10"><b>10</b>Claims guardrails</a>
+    <a href="#s11"><b>11</b>Ownership and setup</a>
+    <a href="#s12"><b>12</b>KPIs and the 14-day test</a>
+  </nav>
+</aside>
+<main>
+<header class="doc">
+  <span class="eyebrow"><i></i>Ora FacePass · FP06 launch campaign</span>
+  <h1 style="margin-top:12px">FP06 Launch Swipe File</h1>
+  <p class="lede">Everything needed to run the FP06 launch on Meta and follow up in GoHighLevel: the decision behind it, the campaign build, every line of ad copy, hooks to test, video scripts, the email and SMS sequences, and the guardrails. Paste-ready. No em dashes.</p>
+  <div class="meta"><span>Prepared September 9, 2026</span><span>Entity: Ora FacePass LLC</span><span>Run by: Peak Revenue Partners under the ISO agreement</span><span>Companion: FP06 Creative Kit, FP06 landing page</span></div>
+</header>
+
+<section class="s" id="s0">
+  <span class="eyebrow"><i></i>00</span><h2>Read this first</h2>
+  <div class="memo">
+    <p><strong>The decision.</strong> Run the FP06 as a launch-list campaign, not a purchase campaign, until Jacky confirms three things: price, ship date, and where it will be sold. You cannot sell what you cannot price or ship. A reservation list is an asset Ora owns, and on launch day it can be pointed at orafacepass.com, at Lowe's, or at dealers. The creative, the landing page and the sequences are built so the only thing that changes at launch is the call to action.</p>
+    <p><strong>Lane fit.</strong> The homeowner track is the Lowe's retail lane. A retail buyer wants to see sell-through support, and this kit is that support: proof of demand, a list to point at stores, and end-cap-ready visuals. The property manager track is the Colorado multifamily lane and drives to a 15-minute walkthrough with the 5-door minimum intact. Anything else (dealers, integrators, senior care) stays parked through November 15.</p>
+    <p><strong>What you are testing.</strong> Which promise stops the scroll for a homeowner: solar, the package camera, the interior screen, face unlock, or privacy. Four concepts go live on day one. The rest rotate in on day three.</p>
+  </div>
+  <h3>Confirmed vs. assumed</h3>
+  <div class="tbl"><table>
+    <tr><th>Claim</th><th>Status</th><th>Source</th></tr>
+    <tr><td>Solar panel charging, dual-battery design, dual cameras (full-body doorbell cam plus package monitoring), 4-inch HD interior screen with two-way intercom, patented triangle latch</td><td class="ok">Confirmed</td><td>Jacky Shi, "Ora FacePass Product Line Overview" email, Aug 30, 2026</td></tr>
+    <tr><td>3D infrared face recognition, under 0.5 s, works in darkness, anti-spoofing, works offline, on-device encrypted storage, no cloud biometrics</td><td class="ok">MY26 line</td><td>Product Knowledge Base and Sales FAQ, Sept 3, 2026. Confirm FP06 uses the same module.</td></tr>
+    <tr><td>IP65, 2.4 GHz Wi-Fi, Alexa and Google Home, USB-C emergency port, 14 days of video on device, 2-yr electronics and 3-yr mechanical warranty</td><td class="no">Assumed carry-over</td><td>MY26 line facts. Get a yes from Jacky before these appear in a public ad.</td></tr>
+    <tr><td>Eight ways in, including palm vein</td><td class="no">Not confirmed for FP06</td><td>8-in-1 is documented for FP02MY26 and FP01MY26 only. Hold H07 and the "eight ways" lines.</td></tr>
+    <tr><td>Price, ship date, retail availability (Lowe's), face capacity per lock, install time, any monthly fee</td><td class="no">Unknown. Do not state.</td><td>Never say "no subscription." Never quote a monthly fee. Never say "at Lowe's" until the PO is confirmed.</td></tr>
+  </table></div>
+</section>
+
+<section class="s" id="s1">
+  <span class="eyebrow"><i></i>01</span><h2>Offer and funnel</h2>
+  <h3>Homeowner track (Lowe's lane)</h3>
+  <p><strong>Offer:</strong> Reserve your spot on the FP06 launch list. First to know, first to order. No payment, no commitment.</p>
+  <p><strong>Path:</strong> Meta ad → FP06 landing page → email reserve form → GoHighLevel contact with tag <code>fp06-launch-list</code> and source <code>Meta | FP06 | 2026-09</code> → 5-email nurture → launch email with price and where to buy.</p>
+  <p><strong>Conversion event:</strong> Meta pixel <code>Lead</code> on form submit, sent server-side through GHL's Conversions API once the pixel is on an Ora-owned domain. Optimize the campaign for that event. Do not optimize for link clicks after day two.</p>
+  <h3>Property manager track (Colorado lane)</h3>
+  <p><strong>Offer:</strong> Book a 15-minute walkthrough. Five-door minimum stated in the ad so the calendar stays clean.</p>
+  <p><strong>Path:</strong> Meta ad → landing page section <code>#pm</code> or a Meta instant form with the two qualifying questions (door count, resident count) → Calendly <code>orafacepass/30min</code> → GHL opportunity in the multifamily pipeline → Dereck calls within five minutes during operating hours.</p>
+  <div class="flag"><b>Why not sell direct today</b>The FP06 has no published price or ship date. Running a purchase-optimized campaign now would burn budget and teach Meta the wrong signal. Reservations cost less, build the pixel, and become the launch-day buyers.</div>
+</section>
+
+<section class="s" id="s2">
+  <span class="eyebrow"><i></i>02</span><h2>Meta campaign build</h2>
+  <p>Two campaigns. Advantage+ placements on. Creative delivered per placement: 4:5 for feeds, 9:16 for Stories and Reels, 1:1 for Marketplace and right column. All budgets below are working assumptions for a 14-day test, not commitments.</p>
+  <div class="tbl"><table>
+    <tr><th>Campaign / ad set</th><th>Audience</th><th>Creative</th><th>Daily</th></tr>
+    <tr><td><strong>A. OFP | FP06 Launch List | US | 2026-09</strong><br>Objective: Leads (website, Lead event)</td><td colspan="3"></td></tr>
+    <tr><td>A1 Broad</td><td>US, 30 to 65, Advantage+ audience with home improvement and smart home as suggestions. Exclude reservers (customer list) and current pipeline accounts.</td><td>H01, H02, H10, H11</td><td>$25</td></tr>
+    <tr><td>A2 Porch and security</td><td>Interests: video doorbells, home security systems, package delivery, smart locks. Same exclusions.</td><td>H03, H04, H09</td><td>$20</td></tr>
+    <tr><td>A3 Smart home</td><td>Interests: Alexa, Google Home, home automation, smart locks. Same exclusions.</td><td>H05, H06, H08 (H07 only once palm vein is confirmed)</td><td>$15</td></tr>
+    <tr><td>A4 Retargeting</td><td>Landing page visitors 30 days, 50% video viewers, IG and FB engagers 90 days. Exclude reservers.</td><td>H11, H08 plus the retargeting copy in section 07</td><td>$10 once the audience passes 1,000</td></tr>
+    <tr><td><strong>B. OFP | CO Multifamily | Walkthrough | 2026-09</strong><br>Objective: Leads (instant form or landing #pm)</td><td colspan="3"></td></tr>
+    <tr><td>B1 Colorado PMs</td><td>Colorado. Job titles: property manager, regional manager, asset manager, director of operations. Interests: National Apartment Association, Yardi, RealPage, AppFolio, Buildium. Exclude renters and apartment shoppers, existing pipeline accounts by customer list.</td><td>P01, P02, P03</td><td>$40</td></tr>
+  </table></div>
+  <h3>Naming</h3>
+  <p>Ads: <code>OFP_FP06_HO_H03_4x5_v1</code>. Entity, product, set (HO or PM), concept ID, ratio, version. The concept ID matches the PNG file name in the kit. UTMs on every link: <code>utm_source=meta&amp;utm_medium=paid&amp;utm_campaign=fp06_launch&amp;utm_content=H03_4x5</code>.</p>
+  <h3>Launch order</h3>
+  <ol>
+    <li>Day 1: A1 with H01 and H10, A2 with H03 and H04, B1 with P01. Everything else paused.</li>
+    <li>Day 3: add H02, H09, H11 to their sets. Add P02, P03.</li>
+    <li>Day 5: add H05, H06, H08. Turn on A4 once the audience is large enough.</li>
+    <li>Day 7: cut the bottom third by cost per reservation. Duplicate the top two ads into the sets where they were not running.</li>
+  </ol>
+</section>
+
+<section class="s" id="s3">
+  <span class="eyebrow"><i></i>03</span><h2>Ad copy bank</h2>
+  <p>One block per concept, matched to the files in the creative kit. Primary text runs 90 to 130 words so the first two lines carry the hook before the "See more" fold. Headlines stay under 40 characters. Every block ends with the same call to action so the account learns one action.</p>
+  <div id="bank"></div>
+</section>
+
+<section class="s" id="s4">
+  <span class="eyebrow"><i></i>04</span><h2>Hook library</h2>
+  <p>Thirty first lines for new statics, Reels, and primary-text tests. A hook is a promise, not a claim: the body copy still has to keep the face as one option and stay inside the guardrails in section 10.</p>
+  <h4>Solar and batteries</h4>
+  <ul class="hooks">
+    <li><b>01</b>The smart lock that charges in the sun.</li>
+    <li><b>02</b>Dead doorbell battery? This one has a solar panel.</li>
+    <li><b>03</b>Daylight in. Batteries stay up.</li>
+    <li><b>04</b>Your front door should not need a charging cable.</li>
+  </ul>
+  <h4>Package camera</h4>
+  <ul class="hooks">
+    <li><b>05</b>Your doorbell cam sees the face. It misses the box.</li>
+    <li><b>06</b>Porch pirates hate the second camera.</li>
+    <li><b>07</b>One camera watches the person. One watches the package.</li>
+    <li><b>08</b>The delivery was "left at the door." Now you can check.</li>
+  </ul>
+  <h4>Interior screen</h4>
+  <ul class="hooks">
+    <li><b>09</b>A peephole with a 4-inch screen.</li>
+    <li><b>10</b>See who's at the door without finding your phone.</li>
+    <li><b>11</b>Talk to the delivery driver without opening the door.</li>
+    <li><b>12</b>The peephole finally got an upgrade.</li>
+  </ul>
+  <h4>Face unlock</h4>
+  <ul class="hooks">
+    <li><b>13</b>Groceries in both hands? Just look at the door.</li>
+    <li><b>14</b>It knows your face in half a second. In the dark.</li>
+    <li><b>15</b>Walk up. Walk in.</li>
+    <li><b>16</b>No keys to lose. No codes to share. Just you.</li>
+    <li><b>17</b>Your kid never has to text "I'm locked out" again.</li>
+  </ul>
+  <h4>Privacy</h4>
+  <ul class="hooks">
+    <li><b>18</b>Your face never leaves your door.</li>
+    <li><b>19</b>A face lock with no cloud. Read that again.</li>
+    <li><b>20</b>No photo of you is stored. Anywhere.</li>
+  </ul>
+  <h4>One device</h4>
+  <ul class="hooks">
+    <li><b>21</b>Doorbell cam. Smart lock. Peephole. That's one device now.</li>
+    <li><b>22</b>Three gadgets on your door. Three apps. Three batteries. Why?</li>
+    <li><b>23</b>One install replaces three.</li>
+    <li><b>24</b>Grandma keeps a key. The kids get a code. You just look at it.</li>
+  </ul>
+  <h4>Launch</h4>
+  <ul class="hooks">
+    <li><b>25</b>The new FP06 is coming. Get in line before it hits shelves.</li>
+    <li><b>26</b>First to know, first to order.</li>
+  </ul>
+  <h4>Property managers</h4>
+  <ul class="hooks">
+    <li><b>27</b>Tenant moves out. Access is gone in 30 seconds.</li>
+    <li><b>28</b>Stop paying a locksmith every time someone moves out.</li>
+    <li><b>29</b>Know exactly who entered 4B.</li>
+    <li><b>30</b>Your maintenance team is not a key service.</li>
+  </ul>
+</section>
+
+<section class="s" id="s5">
+  <span class="eyebrow"><i></i>05</span><h2>Carousels</h2>
+  <h3>Carousel 1: Tour the FP06 (5 cards, 1:1)</h3>
+  <div class="block"><div class="lab">Primary text <button data-copy>Copy</button></div><pre>Swipe through the new Ora FacePass FP06. A smart lock, a video doorbell, a package camera, and a peephole screen in one device. Your face opens it. The sun charges it. Reserve your spot on the launch list.</pre></div>
+  <div class="tbl"><table>
+    <tr><th>Card</th><th>Image</th><th>Headline (under 40 chars)</th><th>Description</th></tr>
+    <tr><td>1</td><td>H01_1x1</td><td>Meet the FP06</td><td>One device on your front door.</td></tr>
+    <tr><td>2</td><td>H10_1x1</td><td>Your face is the key</td><td>3D face unlock in under half a second.</td></tr>
+    <tr><td>3</td><td>H05_1x1</td><td>The sun does the charging</td><td>Solar panel outside. Dual batteries inside.</td></tr>
+    <tr><td>4</td><td>H03_1x1</td><td>Two cameras</td><td>Full-body doorbell view plus a package camera.</td></tr>
+    <tr><td>5</td><td>H04_1x1</td><td>See who's there from inside</td><td>4-inch HD screen with two-way talk. Reserve your spot.</td></tr>
+  </table></div>
+  <h3>Carousel 2: Before and after (3 cards, 1:1)</h3>
+  <div class="block"><div class="lab">Primary text <button data-copy>Copy</button></div><pre>Before: a doorbell camera, a smart lock, a peephole, and three apps. After: one Ora FacePass FP06. Swipe to see the difference. Reserve your spot on the launch list.</pre></div>
+  <div class="tbl"><table>
+    <tr><th>Card</th><th>Image</th><th>Headline</th><th>Description</th></tr>
+    <tr><td>1</td><td>H08_1x1</td><td>Before: three devices</td><td>Three apps. Three sets of batteries.</td></tr>
+    <tr><td>2</td><td>H02_1x1</td><td>After: one</td><td>Lock, doorbell cam, package cam, peephole screen.</td></tr>
+    <tr><td>3</td><td>H11_1x1</td><td>Reserve the FP06</td><td>First to know, first to order.</td></tr>
+  </table></div>
+</section>
+
+<section class="s" id="s6">
+  <span class="eyebrow"><i></i>06</span><h2>Video scripts</h2>
+  <p>Three cuts, all from real footage of the FP06 (Jacky's product short and new phone footage at a real door). No AI-generated renders of the lock, ever. Captions burned in. Every video ends on the same end card: product on the door slab, "Reserve your spot," orafacepass.com.</p>
+  <h3>V1 · "Hands full" · 15 seconds · 9:16 · phone-shot</h3>
+  <div class="tbl"><table>
+    <tr><th>Time</th><th>Shot</th><th>On-screen text</th><th>Voice (optional)</th></tr>
+    <tr><td>0 to 2 s</td><td>Walking up to the door, both hands full of grocery bags, keys visible in a pocket</td><td>Groceries in both hands.</td><td>"Both hands full."</td></tr>
+    <tr><td>2 to 5 s</td><td>Face turns to the lock. Green indicator. Latch sound.</td><td>Just look at the door.</td><td>"Just look at it."</td></tr>
+    <tr><td>5 to 8 s</td><td>Door opens, walk in. Cut to the interior screen showing the porch.</td><td>Face unlock in under half a second.</td><td>"Under half a second. Works in the dark."</td></tr>
+    <tr><td>8 to 12 s</td><td>Close-up of the solar panel in daylight, then the bottom camera.</td><td>Charges in daylight. Watches your packages.</td><td>"Solar charged. Two cameras."</td></tr>
+    <tr><td>12 to 15 s</td><td>End card</td><td>The new Ora FacePass FP06. Reserve your spot.</td><td>"Reserve your spot at orafacepass.com."</td></tr>
+  </table></div>
+  <h3>V2 · "The box on the ground" · 20 seconds · 9:16</h3>
+  <div class="tbl"><table>
+    <tr><th>Time</th><th>Shot</th><th>On-screen text</th></tr>
+    <tr><td>0 to 3 s</td><td>Courier drops a package and walks off, shot from a typical doorbell cam angle that cuts off the box</td><td>Your doorbell cam sees the face.</td></tr>
+    <tr><td>3 to 6 s</td><td>Same moment from the FP06 bottom camera: the box is in frame</td><td>It misses the box.</td></tr>
+    <tr><td>6 to 12 s</td><td>Split view: top camera full-body, bottom camera package. Phone notification.</td><td>The FP06 has two cameras. One watches the person. One watches the package.</td></tr>
+    <tr><td>12 to 16 s</td><td>Interior screen, two-way talk: "You can leave it there, thanks."</td><td>Talk to them without opening the door.</td></tr>
+    <tr><td>16 to 20 s</td><td>End card</td><td>See who's there. See what's there. Reserve your spot.</td></tr>
+  </table></div>
+  <h3>V3 · "Walkthrough" · 30 seconds · 4:5 and 9:16 · product tour</h3>
+  <div class="block"><div class="lab">Voice-over script <button data-copy>Copy</button></div><pre>This is the new Ora FacePass FP06.
+
+Walk up, and it recognizes your face in under half a second. In the dark, in the rain, and when the Wi-Fi is down, because recognition happens on the lock, not in a cloud.
+
+Two cameras. The top one gives you a full-body view of whoever rings. The bottom one watches your packages.
+
+Inside your door, a 4-inch HD screen. See who's there, talk to them, then decide.
+
+A solar panel on the front keeps the batteries charged in daylight. Two batteries inside carry it through the night.
+
+Fingerprint, code, card, key, and the app all work too. Your face is one option, never the only one.
+
+One install replaces the doorbell cam, the smart lock, and the peephole.
+
+The FP06 launch list is open. Reserve your spot at orafacepass.com.</pre></div>
+</section>
+
+<section class="s" id="s7">
+  <span class="eyebrow"><i></i>07</span><h2>Retargeting and launch day</h2>
+  <h3>R1 · Visited, did not reserve (A4, H11 or H08 image)</h3>
+  <div class="block"><div class="lab">Primary text <button data-copy>Copy</button></div><pre>Still thinking about the FP06?
+
+Here is what you get for reserving: launch pricing before anyone else, the ship date the moment it is set, and first access to order. No payment. No commitment. One click to unsubscribe.
+
+The list closes when the first batch is spoken for.</pre></div>
+  <div class="block"><div class="lab">Headline · Description <button data-copy>Copy</button></div><pre>Reserve the FP06 · First to know, first to order.</pre></div>
+  <h3>R2 · Watched a video, did not click (A4, H03 or H04 image)</h3>
+  <div class="block"><div class="lab">Primary text <button data-copy>Copy</button></div><pre>You watched the FP06 do its thing. Here is the short version.
+
+Face unlock in under half a second. Two cameras, one of them for your packages. A 4-inch screen inside your door. A solar panel that charges in daylight. Your face data stays encrypted on the lock.
+
+Reserve your spot and get launch pricing first.</pre></div>
+  <h3>R3 · Property manager visited #pm, did not book (B1, P01 image)</h3>
+  <div class="block"><div class="lab">Primary text <button data-copy>Copy</button></div><pre>Five doors or more? The walkthrough takes 15 minutes.
+
+We will show you turnover without a locksmith, the identity-based entry log, and what one device per door costs against the lock, doorbell and camera you are buying separately today.
+
+Colorado only. Pick a time that works.</pre></div>
+  <h3>L1 · Launch day, to everyone (replace placeholders)</h3>
+  <div class="block"><div class="lab">Primary text <button data-copy>Copy</button></div><pre>It's here. The Ora FacePass FP06 is available today.
+
+Face unlock. Solar charging. Two cameras. A 4-inch screen inside your door. One install replaces three devices.
+
+[PRICE] at [WHERE TO BUY]. [Optional: Launch offer line, only if Jacky approves one.]
+
+Order now, before the first batch is gone.</pre></div>
+  <div class="block"><div class="lab">Headline · Description <button data-copy>Copy</button></div><pre>The FP06 is available now · [PRICE]. [WHERE TO BUY].</pre></div>
+</section>
+
+<section class="s" id="s8">
+  <span class="eyebrow"><i></i>08</span><h2>GHL follow-up sequences</h2>
+  <div class="sender">Entity: Ora FacePass LLC. Sender: Ora FacePass &lt;hello@orafacepass.com&gt;, sent from the Ora FacePass GoHighLevel sub-account. Never from Peak Revenue Partners, never from a personal address. Create the hello@ mailbox and warm it before launch. SMS only if a phone number is captured with express consent; the landing form does not collect phone by default.</div>
+  <h3>Homeowner launch list · trigger: tag fp06-launch-list added</h3>
+  <p>Guardrails: stop on reply, contact time zone, 8:00 AM to 8:00 PM, re-entry off. Every email has a one-click unsubscribe. Placeholders in brackets get filled the day Jacky confirms them.</p>
+
+  <h4>E0 · Instant</h4>
+  <div class="block"><div class="lab">Subject · Preheader <button data-copy>Copy</button></div><pre>You're on the FP06 launch list · Here is what happens next.</pre></div>
+  <div class="block"><div class="lab">Body <button data-copy>Copy</button></div><pre>Hi {{contact.first_name}},
+
+You're on the list for the new Ora FacePass FP06.
+
+Here is what that gets you:
+• Launch pricing before it is public
+• The ship date the moment it is set
+• First access to order
+
+The short version of the FP06: 3D face unlock in under half a second, a solar panel that charges in daylight, two cameras (one of them watches your packages), and a 4-inch HD screen on the inside of your door. One install replaces the doorbell cam, the smart lock and the peephole.
+
+Over the next two weeks I will send a few short emails on how it works. If you have a question before then, reply to this email. A person reads every one.
+
+Ora FacePass
+support@orafacepass.com · 888-673-9899</pre></div>
+
+  <h4>E1 · Day 2 · How it knows it's you</h4>
+  <div class="block"><div class="lab">Subject · Preheader <button data-copy>Copy</button></div><pre>How the FP06 knows it's you · And why your face never leaves your door.</pre></div>
+  <div class="block"><div class="lab">Body <button data-copy>Copy</button></div><pre>Hi {{contact.first_name}},
+
+The most common question about a face-unlock lock is not "does it work." It is "where does my face go."
+
+Nowhere. The FP06 reads the shape of your face with infrared light and turns it into an encrypted 3D model that lives on the lock itself. No photo is stored. Nothing is uploaded. You can delete it any time from the lock or the app.
+
+Because recognition happens on the device, it works in complete darkness, it cannot be fooled by a picture or a video, and it still works when the Wi-Fi is down. Under half a second, every time.
+
+And if someone in your house would rather not use their face, they don't have to. Fingerprint, code, card, key and the app all work.
+
+Ora FacePass</pre></div>
+
+  <h4>E2 · Day 5 · The sun does the charging</h4>
+  <div class="block"><div class="lab">Subject · Preheader <button data-copy>Copy</button></div><pre>The sun does the charging · Dead batteries were the number one complaint. So we fixed it.</pre></div>
+  <div class="block"><div class="lab">Body <button data-copy>Copy</button></div><pre>Hi {{contact.first_name}},
+
+Ask anyone with a smart lock or a doorbell camera what annoys them most and you will hear the same answer: dead batteries.
+
+The FP06 has a solar panel built into the front and a dual-battery design inside. Daylight keeps it charged. The batteries carry it through the night. [If it ever runs all the way down, a USB-C port on the bottom gets you in with any power bank.]
+
+Fewer things to charge. Fewer things to think about.
+
+Ora FacePass</pre></div>
+
+  <h4>E3 · Day 9 · Two cameras</h4>
+  <div class="block"><div class="lab">Subject · Preheader <button data-copy>Copy</button></div><pre>Your doorbell cam misses the box · The FP06 has a second camera for that.</pre></div>
+  <div class="block"><div class="lab">Body <button data-copy>Copy</button></div><pre>Hi {{contact.first_name}},
+
+Most doorbell cameras see a face and miss the box on the ground.
+
+The FP06 has two cameras. The top one gives you a full-body view of whoever rings, with two-way talk so you can answer from anywhere. The bottom one watches your deliveries.
+
+Both live in the same device as your lock. Nothing extra to mount, charge or pair.
+
+Ora FacePass</pre></div>
+
+  <h4>E4 · Day 14 · Inside your door, plus one question</h4>
+  <div class="block"><div class="lab">Subject · Preheader <button data-copy>Copy</button></div><pre>The peephole got a screen · One question for you before launch.</pre></div>
+  <div class="block"><div class="lab">Body <button data-copy>Copy</button></div><pre>Hi {{contact.first_name}},
+
+Inside your door, the FP06 has a 4-inch HD screen. See a full-body view of whoever is outside, talk to them through the intercom, then decide. No phone required.
+
+One question: what is the one thing you want to know before you order? Reply with it. I read every answer, and the most common ones will be answered in the launch email.
+
+Ora FacePass</pre></div>
+
+  <h4>E5 · Launch day (replace placeholders)</h4>
+  <div class="block"><div class="lab">Subject · Preheader <button data-copy>Copy</button></div><pre>The FP06 is available today · [PRICE]. [WHERE TO BUY]. You're first.</pre></div>
+  <div class="block"><div class="lab">Body <button data-copy>Copy</button></div><pre>Hi {{contact.first_name}},
+
+It's here. The Ora FacePass FP06 is available today at [PRICE].
+
+Order here: [LINK]
+[Optional: Find it in store at [RETAILER]: [STORE LOCATOR LINK]]
+
+You reserved early, so you are seeing this before it goes public. [Optional launch offer line, only if approved.]
+
+Face unlock. Solar charging. Two cameras. A 4-inch screen inside your door. One install replaces three devices.
+
+Questions before you order? Reply to this email or call 888-673-9899.
+
+Ora FacePass</pre></div>
+
+  <h3>Property manager walkthrough · trigger: form or instant-form lead tagged fp06-pm-walkthrough</h3>
+  <div class="sender">Entity: Ora FacePass LLC. Sender: Ora FacePass &lt;dereck.loero@orafacepass.com&gt; for this track, because the next step is a call with Dereck. SMS from the Ora FacePass GHL number after A2P registration is confirmed under Ora FacePass LLC.</div>
+  <h4>PM-E1 · Instant</h4>
+  <div class="block"><div class="lab">Subject · Body <button data-copy>Copy</button></div><pre>Your Ora FacePass walkthrough: pick a time
+
+Hi {{contact.first_name}},
+
+Thanks for reaching out about Ora FacePass for {{contact.company_name}}.
+
+The walkthrough takes 15 minutes. Pick a time here: https://calendly.com/orafacepass/30min
+
+Bring two numbers and I will bring the math:
+• How many entry doors you would upgrade first (we work with buildings that have five or more)
+• Roughly how many residents and staff need access
+
+You will leave with a per-door cost against what you spend today on locks, doorbell cameras, cameras and rekeying, plus what turnover looks like when access is revoked from a phone in 30 seconds.
+
+Dereck Loero
+Ora FacePass · (720) 432-9326</pre></div>
+  <h4>PM-SMS1 · Instant (only with consent)</h4>
+  <div class="block"><div class="lab">SMS <button data-copy>Copy</button></div><pre>Hi {{contact.first_name}}, Dereck with Ora FacePass. Grab a 15-min walkthrough time here: https://calendly.com/orafacepass/30min Reply STOP to opt out.</pre></div>
+  <h4>PM-E2 · Day 2 · if no booking</h4>
+  <div class="block"><div class="lab">Subject · Body <button data-copy>Copy</button></div><pre>The rekey math for {{contact.company_name}}
+
+Hi {{contact.first_name}},
+
+Quick math most operators have never put on paper. Every move-out that needs a rekey runs a locksmith call, new keys, and a unit that sits empty while you wait. Across a portfolio that is the biggest access-control cost you have, and it never shows up as one clean line.
+
+Ora FacePass turns that into a 30-second task from your phone. Delete the outgoing resident. Add the new one at lease signing. Every entry is logged by identity.
+
+Still want the walkthrough? Pick a time: https://calendly.com/orafacepass/30min
+
+Dereck</pre></div>
+  <h4>PM-E3 · Day 5 · if no booking</h4>
+  <div class="block"><div class="lab">Subject · Body <button data-copy>Copy</button></div><pre>One device per door
+
+Hi {{contact.first_name}},
+
+Last note from me. On most doors today you are paying for a smart lock, a doorbell camera, a camera and a separate access system. Ora FacePass puts all four in one device per door, managed from one dashboard, starting at $299.99 per door at MSRP.
+
+If the timing is wrong, reply with when to check back and I will. If it is right, here is the calendar: https://calendly.com/orafacepass/30min
+
+Dereck</pre></div>
+  <p style="margin-top:14px"><strong>Internal SLA:</strong> a task fires to Dereck on every PM lead. First human call attempt within five minutes during operating hours, same as the Colorado partner runbook.</p>
+</section>
+
+<section class="s" id="s9">
+  <span class="eyebrow"><i></i>09</span><h2>The retail flip</h2>
+  <p>The day Jacky confirms the Lowe's PO and ship window, the campaign changes in four places and nowhere else.</p>
+  <ol>
+    <li><strong>Landing page:</strong> the reserve form becomes "Find it at Lowe's" with a store locator link, and the specs section gets the price. The hero headline does not change.</li>
+    <li><strong>Ads:</strong> H11 becomes the launch ad with "Available now at Lowe's." Add a geo ad set around the ZIP codes of stocking stores at a 15-mile radius.</li>
+    <li><strong>List:</strong> E5 goes to the whole launch list with the store locator. Reservers are the first buyers and the first reviewers; ask for a review in a follow-up seven days after purchase.</li>
+    <li><strong>Sell-through kit for the Lowe's merchant:</strong> the 4:5 statics double as end-cap and POS visuals. Send Annie the creative kit link, the reservation count, and the launch calendar as the marketing-support evidence behind the SKU.</li>
+  </ol>
+  <div class="flag"><b>Until then</b>No ad, email or page says "Lowe's." Retail status was last verified in May 2026 and has not been refreshed.</div>
+</section>
+
+<section class="s" id="s10">
+  <span class="eyebrow"><i></i>10</span><h2>Claims guardrails</h2>
+  <div class="tbl"><table>
+    <tr><th>Say</th><th>Do not say</th><th>Why</th></tr>
+    <tr><td>"Charges in daylight." "Solar panel plus dual batteries."</td><td>"Never needs charging." "Unlimited battery."</td><td>Solar tops up the batteries. The battery life figure for the FP06 is not published.</td></tr>
+    <tr><td>"Your face is one option." Always list fingerprint, code, card, key, app.</td><td>"Face only." "Faceprint database." Any line that implies face is required.</td><td>Biometric privacy law (BIPA, TX CUBI) and the internal paid-media framework. Face must read as optional.</td></tr>
+    <tr><td>"Encrypted on the device. Never uploaded."</td><td>"Cloud backup of your video." Any cloud storage promise.</td><td>Jacky: no cloud storage. Video stays on the device.</td></tr>
+    <tr><td>"Pricing will be published at launch."</td><td>Any monthly fee. "No subscription." "Free forever."</td><td>Software fee model is unsettled as of September 3. Either statement can become false.</td></tr>
+    <tr><td>"Works with Alexa and Google Home." (once confirmed for FP06)</td><td>Apple Home. Z-Wave. Matter.</td><td>Apple Home unconfirmed. Z-Wave in development with no date.</td></tr>
+    <tr><td>"The Ora FacePass line starts at $299.99 per door at MSRP." (PM ads)</td><td>An FP06 price. Any price below 30% off MSRP.</td><td>FP06 price unknown. MAP policy caps advertised discounts at 30% off MSRP.</td></tr>
+    <tr><td>"Two cameras." "4-inch HD screen inside." "Patented self-latching."</td><td>Camera resolution, field of view, or screen resolution numbers.</td><td>Not published for the FP06. The 2MP and 160° figures belong to the MY26 line.</td></tr>
+    <tr><td>"Hundreds of enrolled users per lock." (if asked)</td><td>A face-capacity number.</td><td>Sources disagree (100 vs 250) and Jacky has not confirmed.</td></tr>
+    <tr><td>"Ora FacePass."</td><td>Competitor names. "Cheap." "Budget." "Low-cost."</td><td>Brand messaging exclusions.</td></tr>
+  </table></div>
+  <p style="margin-top:14px">Style: no em dashes, sentence case, one claim per ad, 12th-grade reading level. Every call to action is "Reserve your spot" (homeowner) or "Book a walkthrough" (PM).</p>
+</section>
+
+<section class="s" id="s11">
+  <span class="eyebrow"><i></i>11</span><h2>Ownership and setup</h2>
+  <p>Everything below must be owned by Ora FacePass LLC, with Peak Revenue Partners holding partner or admin access. Nothing sits in a contractor's account, and nothing sits in a PRP-owned asset that Ora cannot take over.</p>
+  <div class="tbl"><table>
+    <tr><th>Asset</th><th>Owner</th><th>Status and action</th></tr>
+    <tr><td>Meta ad account, pixel, Conversions API</td><td>Ora FacePass LLC Business Manager</td><td>Confirm the ad account is in Ora's Business Manager, not PRP's. PRP is a partner with advertiser access. Pixel installed on the landing page domain.</td></tr>
+    <tr><td>Facebook Page and @orafacepass Instagram</td><td>Ora FacePass LLC</td><td>Page must be authorized in the Ora GHL sub-account. The current Meta connection in GHL exposes only PRP; that blocked the Colorado form in August and blocks this one too.</td></tr>
+    <tr><td>Landing page domain</td><td>Ora FacePass LLC</td><td>Host at a subdomain of orafacepass.com (for example fp06.orafacepass.com) or as a GHL funnel on an Ora-owned domain. Not on a PRP domain. The page ships as a single HTML file plus five images.</td></tr>
+    <tr><td>GHL sub-account, workflows, tags</td><td>Ora FacePass LLC sub-account under the PRP agency</td><td>Tags: fp06-launch-list, fp06-pm-walkthrough. Workflows published only after one test lead runs end to end.</td></tr>
+    <tr><td>Sending mailbox hello@orafacepass.com</td><td>Ora FacePass LLC Google Workspace</td><td>Create, authenticate (SPF, DKIM, DMARC), warm for two weeks before the first send.</td></tr>
+    <tr><td>SMS number and A2P registration</td><td>Ora FacePass LLC</td><td>Confirm the +1 720-386-4081 number is registered under Ora FacePass LLC, not PRP. If not, register before any SMS step is enabled.</td></tr>
+    <tr><td>Calendly orafacepass/30min</td><td>Jacky Shi's Calendly</td><td>Hosted by Jacky, titled "Ora FacePass Sales Intro." Connect that account to GHL, not Dereck's personal Calendly.</td></tr>
+    <tr><td>Creative source files</td><td>Ora FacePass (repo: dloero/ora-facepass-dashboard)</td><td>Template, concepts, fonts and cutouts are in the repo, so anyone can re-render without a designer.</td></tr>
+  </table></div>
+  <h3>Pre-launch checklist</h3>
+  <ol>
+    <li>Jacky signs off on the claims table in section 00 and fills price, ship date, retail.</li>
+    <li>Landing page live on an Ora domain with the review banner removed, pixel firing, form posting to GHL.</li>
+    <li>One test lead through each form. Confirm tag, source, E0 delivery, internal alert.</li>
+    <li>Ads uploaded with names and UTMs per section 02. Reservers customer list created for exclusion.</li>
+    <li>Budget approved in writing (email) by Jacky or Shai before the campaign leaves draft.</li>
+  </ol>
+</section>
+
+<section class="s" id="s12">
+  <span class="eyebrow"><i></i>12</span><h2>KPIs and the 14-day test</h2>
+  <p>Working targets for the first 14 days. The homeowner numbers are assumptions for a consumer hardware waitlist and should be reset after 100 reservations. The PM numbers come from the internal paid-media framework.</p>
+  <div class="grid2">
+    <div class="kpi"><b>$12</b><span>Target cost per reservation (homeowner). Ceiling $20.</span></div>
+    <div class="kpi"><b>25%</b><span>Target landing page reserve rate from paid traffic. Below 12% means the page, not the ad.</span></div>
+    <div class="kpi"><b>$35</b><span>Target cost per PM lead. Ceiling $45 (framework).</span></div>
+    <div class="kpi"><b>12%</b><span>PM lead to booked walkthrough. Below that, the qualifying questions are too loose.</span></div>
+  </div>
+  <h3>Kill and scale rules</h3>
+  <ul>
+    <li>An ad with $60 spent and no reservation is paused. An ad above the ceiling after $120 is paused.</li>
+    <li>An ad under target with 10 or more reservations gets its budget doubled, once, then held for 72 hours.</li>
+    <li>Reserve rate under 12% for two days: fix the page before touching the ads. First suspects: hero load time, form friction, review banner left on.</li>
+    <li>Frequency above 3 in the retargeting set: swap creative before adding budget.</li>
+  </ul>
+  <h3>14-day calendar</h3>
+  <div class="tbl"><table>
+    <tr><th>Day</th><th>What happens</th></tr>
+    <tr><td>0</td><td>Pre-launch checklist complete. Campaigns published at 6 AM MT.</td></tr>
+    <tr><td>1 to 2</td><td>Four homeowner ads and P01 live. Watch delivery and pixel events only. No changes.</td></tr>
+    <tr><td>3</td><td>Add the day-3 creative. First cost-per-reservation read.</td></tr>
+    <tr><td>5</td><td>Add the day-5 creative and the retargeting set. First PM walkthroughs held.</td></tr>
+    <tr><td>7</td><td>Cut the bottom third. Duplicate the top two ads across sets. Report to Jacky and Shai: spend, reservations, cost per reservation, PM walkthroughs booked.</td></tr>
+    <tr><td>10</td><td>Test two new hooks from section 04 as statics using the kit template.</td></tr>
+    <tr><td>14</td><td>Decision: scale, hold, or flip to retail. Reset targets on real data. Second report.</td></tr>
+  </table></div>
+  <h3>Weekly report line (paste into the Tuesday update)</h3>
+  <div class="block"><div class="lab">Template <button data-copy>Copy</button></div><pre>FP06 launch, week [N]: $[SPEND] spent, [N] reservations at $[CPR] each, [N]% reserve rate, [N] PM walkthroughs booked at $[CPL]. Top ad: [ID]. Paused: [IDs]. Next: [one line].</pre></div>
+</section>
+</main>
+</div>
+<script>
+/* Ora FacePass FP06 launch — static ad concepts.
+   Shared by the render template, the creative-kit gallery, and the swipe file.
+   Copy rules: no em dashes, sentence case, one claim per ad, face is always one option among several. */
+window.FP06_CONCEPTS = [
+  {
+    id: "H01", set: "homeowner", name: "Hero: face + solar", format: "Thesis / hero",
+    layout: "poster", theme: "light", img: "front-angle",
+    eyebrow: "New · Ora FacePass FP06",
+    h1: "Your face opens it. The sun charges it.",
+    sub: "3D face unlock in under half a second. A solar panel that charges in daylight. One device on your front door.",
+    cta: "Reserve your spot",
+    chips: ["3D face unlock", "Solar charging", "Video doorbell", "IP65 outdoor"],
+    meta: {
+      primary: "Your face opens it. The sun charges it.\n\nThe new Ora FacePass FP06 is a smart lock, a video doorbell, a package camera, and a peephole screen in one device. Walk up and it recognizes you in under half a second. A solar panel on the front keeps the batteries topped up in daylight.\n\nNo keys to lose. No codes to share. Your face data stays encrypted on the lock, never in a cloud.\n\nThe launch list is open. Reserve your spot and be first to order.",
+      headline: "Face unlock. Solar charged.",
+      description: "Smart lock, doorbell cam and package cam in one."
+    },
+    verify: ["Solar charging and dual battery confirmed by Jacky (Aug 30). Do not say 'never needs charging'."]
+  },
+  {
+    id: "H02", set: "homeowner", name: "Three devices, one install", format: "Consolidation",
+    layout: "slab", theme: "light", img: "front-back-straight",
+    eyebrow: "New · Ora FacePass FP06",
+    h1: "Doorbell cam. Smart lock. Peephole screen. One device.",
+    sub: "Outside: face unlock and two cameras. Inside: a 4-inch HD screen with two-way talk.",
+    cta: "Reserve your spot",
+    chips: [],
+    meta: {
+      primary: "Right now your front door probably has a doorbell camera, a smart lock or a keypad, and a peephole. Three devices. Three apps. Three sets of batteries.\n\nThe new Ora FacePass FP06 does all of it in one install. Outside: 3D face unlock, a full-body doorbell camera, and a second camera that watches your packages. Inside: a 4-inch HD screen so you can see and talk to whoever is at the door without opening it.\n\nReserve your spot on the launch list.",
+      headline: "Three devices. Now one.",
+      description: "Lock, doorbell cam, package cam, peephole screen."
+    },
+    verify: []
+  },
+  {
+    id: "H03", set: "homeowner", name: "Package camera", format: "Problem / solution",
+    layout: "callout", theme: "dark", img: "front-angle",
+    eyebrow: "New · Ora FacePass FP06",
+    h1: "It sees who's at the door. And whether your package is still there.",
+    sub: "",
+    cta: "",
+    chips: [],
+    callouts: [
+      { y: 5.5, side: "r", t: "Doorbell camera", d: "Full-body view of who rang" },
+      { y: 94, side: "r", t: "Package camera", d: "Watches your deliveries" }
+    ],
+    meta: {
+      primary: "Most doorbell cameras see a face. They miss the box on the ground.\n\nThe new Ora FacePass FP06 has two cameras. The top one gives you a full-body view of whoever rings. The bottom one watches your deliveries. Both live in the same device as your lock, so there is nothing extra to mount, charge, or pair.\n\nSee who's there. See what's there. Reserve your spot on the launch list.",
+      headline: "Two cameras. One lock.",
+      description: "Full-body doorbell view plus package monitoring."
+    },
+    verify: ["Dual camera (full-body doorbell cam + package delivery monitoring) confirmed by Jacky (Aug 30)."]
+  },
+  {
+    id: "H04", set: "homeowner", name: "Interior screen", format: "Feature / demo",
+    layout: "screen", theme: "dark", img: "interior-screen-closeup",
+    eyebrow: "New · Ora FacePass FP06",
+    h1: "See who's there before you open the door.",
+    sub: "A 4-inch HD screen on the inside of your door. Two-way talk built in. No phone required.",
+    cta: "Reserve your spot",
+    chips: [],
+    meta: {
+      primary: "The peephole has not changed in decades. Your door deserves better.\n\nThe new Ora FacePass FP06 puts a 4-inch HD screen on the inside of your door. See a full-body view of whoever is outside. Talk to them through the two-way intercom. Decide, then open. No phone required.\n\nReserve your spot on the launch list.",
+      headline: "A peephole with a screen.",
+      description: "4-inch HD interior display with two-way talk."
+    },
+    verify: ["Inner panel 4-inch HD screen with two-way intercom confirmed by Jacky (Aug 30)."]
+  },
+  {
+    id: "H05", set: "homeowner", name: "Solar + dual battery", format: "Objection killer (dead batteries)",
+    layout: "callout", theme: "light", img: "front-straight",
+    eyebrow: "New · Ora FacePass FP06",
+    h1: "Charges in daylight. Runs on two batteries after dark.",
+    sub: "",
+    cta: "",
+    chips: [],
+    callouts: [
+      { y: 70, side: "l", t: "Solar panel", d: "Charges in daylight" },
+      { y: 57, side: "r", t: "Dual batteries", d: "Power after dark" }
+    ],
+    meta: {
+      primary: "The biggest complaint about smart locks and doorbell cams is the same one: dead batteries.\n\nThe new Ora FacePass FP06 has a solar panel built into the front and a dual-battery design inside. Daylight keeps it charged. The batteries carry it through the night. And if you ever run it all the way down, a USB-C port on the bottom gets you in.\n\nReserve your spot on the launch list.",
+      headline: "Solar-charged smart lock",
+      description: "Solar panel outside. Dual batteries inside."
+    },
+    verify: ["USB-C emergency port is a MY26-line feature. Confirm it carried over to FP06 before running the primary text as written."]
+  },
+  {
+    id: "H06", set: "homeowner", name: "Privacy", format: "Trust / objection",
+    layout: "slab", theme: "dark", img: "front-straight",
+    eyebrow: "Ora FacePass FP06",
+    h1: "Your face never leaves your door.",
+    sub: "Face data is encrypted on the lock itself. It is never uploaded to a cloud.",
+    cta: "Reserve your spot",
+    chips: ["Encrypted on-device", "No cloud biometrics", "Face is optional"],
+    meta: {
+      primary: "A lock that knows your face should not send your face anywhere.\n\nOra FacePass stores your face as an encrypted 3D model on the lock itself. No photo. No cloud copy. No account to breach. If you would rather not use your face at all, use a fingerprint, a code, a card, a key, or the app.\n\nThe new FP06 is coming. Reserve your spot on the launch list.",
+      headline: "Privacy built in",
+      description: "Face data stays encrypted on the lock."
+    },
+    verify: ["On-device-only biometric storage is documented for the MY26 smart locks. Confirm the FP06 uses the same architecture."]
+  },
+  {
+    id: "H07", set: "homeowner", name: "Eight ways in", format: "Benefit stack",
+    layout: "grid8", theme: "light", img: "front-straight",
+    eyebrow: "New · Ora FacePass FP06",
+    h1: "Eight ways in. Zero keys required.",
+    sub: "Everyone in the house gets the way in that suits them.",
+    cta: "",
+    chips: [],
+    pills: ["3D face", "Palm vein", "Fingerprint", "Access code", "Card or fob", "Physical key", "App unlock", "Doorbell entry"],
+    meta: {
+      primary: "Everyone in your house opens the door a different way.\n\nGrandparents want a key. Kids get a code. You just look at it. The new Ora FacePass FP06 gives you eight ways in: 3D face, palm vein, fingerprint, access code, card or fob, physical key, the app, and remote unlock from the doorbell call.\n\nOne lock. Everyone's way in. Reserve your spot.",
+      headline: "Eight ways to unlock",
+      description: "Face, fingerprint, code, card, key, app and more."
+    },
+    verify: ["8-in-1 is documented for FP02MY26 and FP01MY26. Palm vein on the FP06 is NOT confirmed. Hold this ad until Jacky confirms the FP06 unlock list."]
+  },
+  {
+    id: "H08", set: "homeowner", name: "Before / after", format: "Before / after",
+    layout: "split", theme: "light", img: "front-angle-only",
+    eyebrow: "New · Ora FacePass FP06",
+    h1: "The front door, simplified.",
+    sub: "",
+    cta: "Reserve your spot",
+    chips: [],
+    before: ["Doorbell camera", "Smart lock or keypad", "Peephole", "Three apps, three sets of batteries"],
+    after: "One device. One app. Charges in the sun.",
+    meta: {
+      primary: "Before: a doorbell camera, a smart lock, a peephole, and three apps that never quite talk to each other.\n\nAfter: one Ora FacePass FP06. Face unlock, a full-body doorbell camera, a package camera, and a 4-inch screen inside your door. One app. One install. And a solar panel so you are not swapping batteries every few months.\n\nReserve your spot on the launch list.",
+      headline: "One install replaces three",
+      description: "Smart lock, doorbell cam, package cam, peephole."
+    },
+    verify: []
+  },
+  {
+    id: "H09", set: "homeowner", name: "Annotated product", format: "Spec callout",
+    layout: "callout", theme: "dark", img: "front-straight",
+    eyebrow: "New · Ora FacePass FP06",
+    h1: "Everything your front door needed. One install.",
+    sub: "",
+    cta: "",
+    chips: [],
+    callouts: [
+      { y: 5.5, side: "l", t: "3D face unlock", d: "Plus full-body doorbell cam" },
+      { y: 21, side: "r", t: "Keypad + card", d: "Codes and fobs" },
+      { y: 36.5, side: "l", t: "Doorbell", d: "Keyway hidden behind it" },
+      { y: 51, side: "r", t: "Fingerprint", d: "Under half a second" },
+      { y: 70, side: "l", t: "Solar panel", d: "Charges in daylight" },
+      { y: 94, side: "r", t: "Package camera", d: "Watches deliveries" }
+    ],
+    meta: {
+      primary: "Here is everything on the front of the new Ora FacePass FP06:\n\n• 3D face unlock and a full-body doorbell camera\n• Keypad and card reader\n• Doorbell button with the keyway hidden behind it\n• Fingerprint reader\n• Solar panel\n• A second camera for packages\n\nInside your door: a 4-inch HD screen with two-way talk. Reserve your spot on the launch list.",
+      headline: "Meet the FP06",
+      description: "Face unlock, two cameras, solar, and a screen inside."
+    },
+    verify: ["Hidden keyway behind the doorbell is a MY26-line detail. Confirm for FP06."]
+  },
+  {
+    id: "H10", set: "homeowner", name: "Hands full", format: "Moment / lifestyle",
+    layout: "slab", theme: "light", img: "front-angle",
+    eyebrow: "New · Ora FacePass FP06",
+    h1: "Groceries in both hands? Just look at the door.",
+    sub: "3D face unlock in under half a second. Works in the dark. Works when the Wi-Fi is down.",
+    cta: "Reserve your spot",
+    chips: ["Under 0.5 s", "Works in darkness", "Works offline"],
+    meta: {
+      primary: "Keys in the bag. Bag in one hand. Kid in the other.\n\nThe new Ora FacePass FP06 recognizes your face in under half a second and unlocks. It works in the dark, in the rain, and when the Wi-Fi is down, because recognition happens on the lock, not in a cloud.\n\nWalk up. Walk in. Reserve your spot on the launch list.",
+      headline: "Walk up. Walk in.",
+      description: "3D face unlock in under half a second."
+    },
+    verify: ["Under 0.5 s, works in darkness and offline are documented for the MY26 line. Confirm for FP06."]
+  },
+  {
+    id: "H11", set: "homeowner", name: "Launch list", format: "Offer / launch",
+    layout: "poster", theme: "dark", img: "front-angle",
+    eyebrow: "Launch list open",
+    h1: "The new Ora FacePass FP06.",
+    sub: "Be first to order. No payment, no commitment.",
+    cta: "Reserve your spot",
+    chips: ["Face unlock", "Solar", "2 cameras", "Interior screen"],
+    meta: {
+      primary: "The new Ora FacePass FP06 is almost here.\n\nSmart lock, video doorbell, package camera, and a 4-inch screen inside your door. 3D face unlock. Solar charging. Eight ways in.\n\nJoin the launch list to be first to order. No payment and no commitment.",
+      headline: "Reserve the FP06",
+      description: "First to know. First to order."
+    },
+    verify: ["'Eight ways in' in the primary text depends on the FP06 unlock list. Swap to 'multiple ways in' if unconfirmed at launch."]
+  },
+  {
+    id: "P01", set: "pm", name: "Turnover without a locksmith", format: "Pain hook (rekey)",
+    layout: "slab", theme: "dark", img: "front-back-angle",
+    eyebrow: "Ora FacePass · For property managers",
+    h1: "Tenant moves out. Access is gone in 30 seconds.",
+    sub: "No locksmith. No rekey. Revoke from your phone.",
+    cta: "Book a walkthrough",
+    chips: ["Face, code, or app", "Entry log by identity", "5-door minimum"],
+    meta: {
+      primary: "Every move-out costs you a locksmith call, a new set of keys, and a unit that sits empty while you wait.\n\nOra FacePass turns turnover into a 30-second task from your phone. Delete the outgoing resident. Add the new one at lease signing. Residents open the door with their face, a code, or the app. Every entry is logged by identity.\n\nColorado property managers: book a 15-minute walkthrough. We work with buildings that have five or more doors.",
+      headline: "Stop rekeying at turnover",
+      description: "Revoke and grant access from your phone."
+    },
+    verify: []
+  },
+  {
+    id: "P02", set: "pm", name: "Audit trail", format: "Liability / control",
+    layout: "slab", theme: "light", img: "front-straight",
+    eyebrow: "Ora FacePass · For property managers",
+    h1: "Know exactly who entered 4B.",
+    sub: "Every entry is logged by identity. Residents choose face, code, card, or app.",
+    cta: "Book a 15-minute walkthrough",
+    chips: ["Identity-based log", "No shared codes", "One dashboard"],
+    meta: {
+      primary: "\"Who had access to that unit?\" should never be a guess.\n\nOra FacePass logs every entry by identity and time. No shared codes floating around. No copied keys. Residents choose how they enter: face, code, card, or app. You get the record.\n\nColorado property managers: book a 15-minute walkthrough. Five-door minimum.",
+      headline: "An entry log for every door",
+      description: "Identity-based access records."
+    },
+    verify: []
+  },
+  {
+    id: "P03", set: "pm", name: "One device per door", format: "Consolidation + price anchor",
+    layout: "split", theme: "dark", img: "front-angle-only",
+    eyebrow: "Ora FacePass · For property managers",
+    h1: "Lock. Doorbell. Camera. Access log. One device per door.",
+    sub: "",
+    cta: "Book a walkthrough",
+    chips: [],
+    before: ["Smart lock", "Doorbell camera", "Security camera", "Separate access system"],
+    after: "The Ora FacePass line starts at $299.99 per door at MSRP.",
+    meta: {
+      primary: "Stacking a smart lock, a doorbell camera, a security camera, and a separate access system on every door adds up fast.\n\nOra FacePass puts all of it in one device per door: 3D face unlock, video doorbell with two-way talk, camera, and an identity-based entry log you manage from one dashboard. The line starts at $299.99 per door at MSRP.\n\nColorado property managers with five or more doors: book a 15-minute walkthrough.",
+      headline: "One device per door",
+      description: "From $299.99 per door at MSRP."
+    },
+    verify: ["$299.99 is the FP02MY26 MSRP. The image shows the FP06. If FP06 pricing lands higher, swap the image for FP02MY26 or remove the price line."]
+  }
+];
+
+(function () {
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const bank = document.getElementById("bank");
+  bank.innerHTML = window.FP06_CONCEPTS.map(c => `
+    <div class="concept-copy" id="copy-${c.id}">
+      <span class="id">${c.id} · ${c.set === "pm" ? "Property managers" : "Homeowner"} · files ${c.id}_1x1 / 4x5 / 9x16</span>
+      <h3 style="margin-top:6px">${esc(c.name)}</h3>
+      <div class="block"><div class="lab">Primary text <button data-copy>Copy</button></div><pre>${esc(c.meta.primary)}</pre></div>
+      <div class="block"><div class="lab">Headline <button data-copy>Copy</button></div><pre>${esc(c.meta.headline)}</pre></div>
+      <div class="block"><div class="lab">Description <button data-copy>Copy</button></div><pre>${esc(c.meta.description)}</pre></div>
+      ${c.verify && c.verify.length ? `<div class="flag"><b>Verify before running</b>${c.verify.map(esc).join("<br>")}</div>` : ""}
+    </div>`).join("");
+  document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => {
+    const txt = b.closest(".block").querySelector("pre").innerText;
+    try { await navigator.clipboard.writeText(txt); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1400); } catch (e) { b.textContent = "Select and copy"; }
+  }));
+})();
+</script>
